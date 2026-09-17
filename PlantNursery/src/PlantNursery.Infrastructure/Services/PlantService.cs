@@ -141,7 +141,13 @@ public class PlantService : IPlantService
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
+        var primaryImages = request.Images.Count(x => x.IsPrimary);
 
+        if (primaryImages > 1)
+        {
+            throw new ArgumentException(
+                "A plant can have only one primary image.");
+        }
         foreach (var imageRequest in request.Images)
         {
             plant.Images.Add(new PlantImage
@@ -219,14 +225,21 @@ public class PlantService : IPlantService
         plant.Size = request.Size?.Trim();
         plant.CategoryId = request.CategoryId;
         plant.UpdatedAt = DateTime.UtcNow;
+        var primaryImages = request.Images
+    .Count(x => x.IsPrimary);
 
+        if (primaryImages > 1)
+        {
+            throw new ArgumentException(
+                "A plant can have only one primary image.");
+        }
 
         // Remove existing images
         var existingImages = await _context.PlantImages
             .Where(x => x.PlantId == plant.Id)
             .ToListAsync();
 
-        _context.PlantImages.RemoveRange(existingImages);       
+        _context.PlantImages.RemoveRange(existingImages);
 
         // Add new images
         foreach (var imageRequest in request.Images)
@@ -243,7 +256,7 @@ public class PlantService : IPlantService
             _context.PlantImages.Add(image);
         }
 
-        await _context.SaveChangesAsync();       
+        await _context.SaveChangesAsync();
 
         return await GetByIdAsync(plant.Id);
     }
