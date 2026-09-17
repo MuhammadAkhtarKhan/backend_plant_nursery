@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PlantNursery.Application.Common;
 using PlantNursery.Application.DTOs.Categories;
 using PlantNursery.Application.Interfaces;
 
@@ -17,16 +18,19 @@ public class CategoryController : ControllerBase
         _categoryService = categoryService;
     }
 
-    // GET: api/category
+    // Admin, Cashier and Customer
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         var categories = await _categoryService.GetAllAsync();
 
-        return Ok(categories);
+        return Ok(
+            ApiResponse<IEnumerable<CategoryDto>>.Ok(
+                categories,
+                "Categories retrieved successfully."));
     }
 
-    // GET: api/category/{id}
+    // Admin, Cashier and Customer
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -34,83 +38,58 @@ public class CategoryController : ControllerBase
 
         if (category == null)
         {
-            return NotFound(new
-            {
-                message = "Category not found."
-            });
+            return NotFound(
+                ApiResponse.Fail(
+                    "Category not found."));
         }
 
-        return Ok(category);
+        return Ok(
+            ApiResponse<CategoryDto>.Ok(
+                category,
+                "Category retrieved successfully."));
     }
 
-    // POST: api/category
+    // Admin only
     [Authorize(Roles = "Admin")]
     [HttpPost]
-    public async Task<IActionResult> Create(CreateCategoryRequest request)
+    public async Task<IActionResult> Create(
+        CreateCategoryRequest request)
     {
-        try
-        {
-            var category = await _categoryService.CreateAsync(request);
+        var category = await _categoryService.CreateAsync(request);
 
-            return CreatedAtAction(
-                nameof(GetById),
-                new { id = category.Id },
-                category);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new
-            {
-                message = ex.Message
-            });
-        }
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = category.Id },
+            ApiResponse<CategoryDto>.Ok(
+                category,
+                "Category created successfully."));
     }
 
-    // PUT: api/category/{id}
+    // Admin only
     [Authorize(Roles = "Admin")]
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, UpdateCategoryRequest request)
+    public async Task<IActionResult> Update(
+        Guid id,
+        UpdateCategoryRequest request)
     {
-        try
-        {
-            var category = await _categoryService.UpdateAsync(
-                id,
-                request);
+        var category = await _categoryService.UpdateAsync(
+            id,
+            request);
 
-            if (category == null)
-            {
-                return NotFound(new
-                {
-                    message = "Category not found."
-                });
-            }
+        if (category == null)
+        {
+            return NotFound(
+                ApiResponse.Fail(
+                    "Category not found."));
+        }
 
-            return Ok(category);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new
-            {
-                message = ex.Message
-            });
-        }
+        return Ok(
+            ApiResponse<CategoryDto>.Ok(
+                category,
+                "Category updated successfully."));
     }
 
-    // DELETE: api/category/{id}
+    // Admin only
     [Authorize(Roles = "Admin")]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Deactivate(Guid id)
@@ -119,15 +98,13 @@ public class CategoryController : ControllerBase
 
         if (!result)
         {
-            return NotFound(new
-            {
-                message = "Category not found or already inactive."
-            });
+            return NotFound(
+                ApiResponse.Fail(
+                    "Category not found or already inactive."));
         }
 
-        return Ok(new
-        {
-            message = "Category deactivated successfully."
-        });
+        return Ok(
+            ApiResponse.Ok(
+                "Category deactivated successfully."));
     }
 }

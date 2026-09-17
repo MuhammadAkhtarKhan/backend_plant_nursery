@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PlantNursery.Application.Common;
 using PlantNursery.Application.DTOs.Plants;
 using PlantNursery.Application.Interfaces;
 
@@ -23,7 +24,10 @@ public class PlantController : ControllerBase
     {
         var plants = await _plantService.GetAllAsync();
 
-        return Ok(plants);
+        return Ok(
+            ApiResponse<IEnumerable<PlantDto>>.Ok(
+                plants,
+                "Plants retrieved successfully."));
     }
 
     // Admin, Cashier and Customer
@@ -34,13 +38,15 @@ public class PlantController : ControllerBase
 
         if (plant == null)
         {
-            return NotFound(new
-            {
-                message = "Plant not found."
-            });
+            return NotFound(
+                ApiResponse.Fail(
+                    "Plant not found."));
         }
 
-        return Ok(plant);
+        return Ok(
+            ApiResponse<PlantDto>.Ok(
+                plant,
+                "Plant retrieved successfully."));
     }
 
     // Admin only
@@ -49,29 +55,14 @@ public class PlantController : ControllerBase
     public async Task<IActionResult> Create(
         CreatePlantRequest request)
     {
-        try
-        {
-            var plant = await _plantService.CreateAsync(request);
+        var plant = await _plantService.CreateAsync(request);
 
-            return CreatedAtAction(
-                nameof(GetById),
-                new { id = plant.Id },
-                plant);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new
-            {
-                message = ex.Message
-            });
-        }
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = plant.Id },
+            ApiResponse<PlantDto>.Ok(
+                plant,
+                "Plant created successfully."));
     }
 
     // Admin only
@@ -81,36 +72,21 @@ public class PlantController : ControllerBase
         Guid id,
         UpdatePlantRequest request)
     {
-        try
-        {
-            var plant = await _plantService.UpdateAsync(
-                id,
-                request);
+        var plant = await _plantService.UpdateAsync(
+            id,
+            request);
 
-            if (plant == null)
-            {
-                return NotFound(new
-                {
-                    message = "Plant not found."
-                });
-            }
+        if (plant == null)
+        {
+            return NotFound(
+                ApiResponse.Fail(
+                    "Plant not found."));
+        }
 
-            return Ok(plant);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new
-            {
-                message = ex.Message
-            });
-        }
+        return Ok(
+            ApiResponse<PlantDto>.Ok(
+                plant,
+                "Plant updated successfully."));
     }
 
     // Admin only
@@ -122,15 +98,13 @@ public class PlantController : ControllerBase
 
         if (!result)
         {
-            return NotFound(new
-            {
-                message = "Plant not found or already inactive."
-            });
+            return NotFound(
+                ApiResponse.Fail(
+                    "Plant not found or already inactive."));
         }
 
-        return Ok(new
-        {
-            message = "Plant deactivated successfully."
-        });
+        return Ok(
+            ApiResponse.Ok(
+                "Plant deactivated successfully."));
     }
 }
