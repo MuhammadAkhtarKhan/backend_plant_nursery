@@ -12,6 +12,7 @@ using PlantNursery.Infrastructure.Services;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IPlantService, PlantService>();
 // Database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
