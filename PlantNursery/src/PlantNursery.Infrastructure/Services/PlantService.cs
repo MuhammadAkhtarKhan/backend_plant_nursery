@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using PlantNursery.Application.Common.Exceptions;
 using PlantNursery.Application.DTOs.Plants;
 using PlantNursery.Application.Interfaces;
 using PlantNursery.Domain.Entities;
@@ -97,11 +98,11 @@ public class PlantService : IPlantService
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            throw new ArgumentException(
+            throw new ValidationException(
                 "Plant name is required.");
         }
 
-        // Validate Category
+        // Validate category
         var categoryExists = await _context.Categories
             .AnyAsync(x =>
                 x.Id == request.CategoryId &&
@@ -109,7 +110,7 @@ public class PlantService : IPlantService
 
         if (!categoryExists)
         {
-            throw new ArgumentException(
+            throw new ValidationException(
                 "The selected category does not exist or is inactive.");
         }
 
@@ -121,8 +122,18 @@ public class PlantService : IPlantService
 
         if (duplicateName)
         {
-            throw new InvalidOperationException(
+            throw new ConflictException(
                 "A plant with this name already exists.");
+        }
+
+        // Only one primary image is allowed
+        var primaryImages = request.Images
+            .Count(x => x.IsPrimary);
+
+        if (primaryImages > 1)
+        {
+            throw new ValidationException(
+                "A plant can have only one primary image.");
         }
 
         var plant = new Plant
@@ -134,20 +145,16 @@ public class PlantService : IPlantService
             StockQuantity = request.StockQuantity,
             ScientificName = request.ScientificName?.Trim(),
             CareInstructions = request.CareInstructions?.Trim(),
-            SunlightRequirement = request.SunlightRequirement?.Trim(),
-            WateringFrequency = request.WateringFrequency?.Trim(),
+            SunlightRequirement =
+                request.SunlightRequirement?.Trim(),
+            WateringFrequency =
+                request.WateringFrequency?.Trim(),
             Size = request.Size?.Trim(),
             CategoryId = request.CategoryId,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
-        var primaryImages = request.Images.Count(x => x.IsPrimary);
 
-        if (primaryImages > 1)
-        {
-            throw new ArgumentException(
-                "A plant can have only one primary image.");
-        }
         foreach (var imageRequest in request.Images)
         {
             plant.Images.Add(new PlantImage
@@ -183,11 +190,11 @@ public class PlantService : IPlantService
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            throw new ArgumentException(
+            throw new ValidationException(
                 "Plant name is required.");
         }
 
-        // Validate Category
+        // Validate category
         var categoryExists = await _context.Categories
             .AnyAsync(x =>
                 x.Id == request.CategoryId &&
@@ -195,7 +202,7 @@ public class PlantService : IPlantService
 
         if (!categoryExists)
         {
-            throw new ArgumentException(
+            throw new ValidationException(
                 "The selected category does not exist or is inactive.");
         }
 
@@ -208,38 +215,41 @@ public class PlantService : IPlantService
 
         if (duplicateName)
         {
-            throw new InvalidOperationException(
+            throw new ConflictException(
                 "A plant with this name already exists.");
+        }
+
+        // Only one primary image is allowed
+        var primaryImages = request.Images
+            .Count(x => x.IsPrimary);
+
+        if (primaryImages > 1)
+        {
+            throw new ValidationException(
+                "A plant can have only one primary image.");
         }
 
         plant.Name = name;
         plant.Description = request.Description?.Trim();
         plant.Price = request.Price;
         plant.StockQuantity = request.StockQuantity;
-        plant.ScientificName = request.ScientificName?.Trim();
-        plant.CareInstructions = request.CareInstructions?.Trim();
+        plant.ScientificName =
+            request.ScientificName?.Trim();
+        plant.CareInstructions =
+            request.CareInstructions?.Trim();
         plant.SunlightRequirement =
             request.SunlightRequirement?.Trim();
         plant.WateringFrequency =
             request.WateringFrequency?.Trim();
-        plant.Size = request.Size?.Trim();
-        plant.CategoryId = request.CategoryId;
-        plant.UpdatedAt = DateTime.UtcNow;
-        var primaryImages = request.Images
-    .Count(x => x.IsPrimary);
+        plant.Size =
+            request.Size?.Trim();
+        plant.CategoryId =
+            request.CategoryId;
+        plant.UpdatedAt =
+            DateTime.UtcNow;
 
-        if (primaryImages > 1)
-        {
-            throw new ArgumentException(
-                "A plant can have only one primary image.");
-        }
-
-        // Remove existing images
-        var existingImages = await _context.PlantImages
-            .Where(x => x.PlantId == plant.Id)
-            .ToListAsync();
-
-        _context.PlantImages.RemoveRange(existingImages);
+        // Replace existing images
+        _context.PlantImages.RemoveRange(plant.Images);
 
         // Add new images
         foreach (var imageRequest in request.Images)

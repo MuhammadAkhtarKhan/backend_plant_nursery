@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using PlantNursery.Application.Common;
+using PlantNursery.Application.Common.Exceptions;
 
 namespace PlantNursery.API.Middleware;
 
@@ -33,30 +34,36 @@ public class GlobalExceptionMiddleware
         }
     }
 
-    private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
+    private static async Task HandleExceptionAsync(
+        HttpContext context,
+        Exception exception)
     {
         var statusCode = exception switch
         {
-            ArgumentException => StatusCodes.Status400BadRequest,
+            ValidationException => StatusCodes.Status400BadRequest,
 
-            UnauthorizedAccessException => StatusCodes.Status401Unauthorized,
+            UnauthorizedException => StatusCodes.Status401Unauthorized,
 
-            KeyNotFoundException => StatusCodes.Status404NotFound,
+            ForbiddenException => StatusCodes.Status403Forbidden,
 
-            InvalidOperationException => StatusCodes.Status409Conflict,
+            NotFoundException => StatusCodes.Status404NotFound,
 
-            _ =>  StatusCodes.Status500InternalServerError
+            ConflictException => StatusCodes.Status409Conflict,
+
+            _ => StatusCodes.Status500InternalServerError
         };
 
         var message = exception switch
         {
-            ArgumentException => exception.Message,
+            ValidationException => exception.Message,
 
-            UnauthorizedAccessException => exception.Message,
+            UnauthorizedException => exception.Message,
 
-            KeyNotFoundException => exception.Message,
+            ForbiddenException => exception.Message,
 
-            InvalidOperationException =>  exception.Message,
+            NotFoundException => exception.Message,
+
+            ConflictException => exception.Message,
 
             _ => "An unexpected error occurred."
         };
@@ -66,6 +73,7 @@ public class GlobalExceptionMiddleware
         context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/json";
 
-        await context.Response.WriteAsync( JsonSerializer.Serialize(response));
+        await context.Response.WriteAsync(
+            JsonSerializer.Serialize(response));
     }
 }

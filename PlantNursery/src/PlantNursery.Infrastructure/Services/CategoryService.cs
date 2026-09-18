@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using PlantNursery.Application.Common.Exceptions;
 using PlantNursery.Application.DTOs.Categories;
 using PlantNursery.Application.Interfaces;
 using PlantNursery.Domain.Entities;
@@ -38,7 +39,9 @@ public class CategoryService : ICategoryService
     {
         return await _context.Categories
             .AsNoTracking()
-            .Where(x => x.Id == id && x.IsActive)
+            .Where(x =>
+                x.Id == id &&
+                x.IsActive)
             .Select(x => new CategoryDto
             {
                 Id = x.Id,
@@ -59,7 +62,7 @@ public class CategoryService : ICategoryService
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            throw new ArgumentException(
+            throw new ValidationException(
                 "Category name is required.");
         }
 
@@ -68,7 +71,7 @@ public class CategoryService : ICategoryService
 
         if (exists)
         {
-            throw new InvalidOperationException(
+            throw new ConflictException(
                 "A category with this name already exists.");
         }
 
@@ -105,7 +108,7 @@ public class CategoryService : ICategoryService
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            throw new ArgumentException(
+            throw new ValidationException(
                 "Category name is required.");
         }
 
@@ -116,7 +119,7 @@ public class CategoryService : ICategoryService
 
         if (duplicateName)
         {
-            throw new InvalidOperationException(
+            throw new ConflictException(
                 "A category with this name already exists.");
         }
 
