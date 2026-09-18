@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using PlantNursery.Application.Common;
 using PlantNursery.Application.DTOs.Auth;
 using PlantNursery.Application.Interfaces;
 
@@ -18,36 +19,16 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterRequest request)
     {
-        try
-        {
-            var response = await _authService.RegisterAsync(request);
+        var response = await _authService.RegisterAsync(request);
 
-            return Ok(response);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
-        }
+        return Ok( ApiResponse<AuthResponse>.Ok(response, "Registration successful."));
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest request)
     {
-        try
-        {
-            var response = await _authService.LoginAsync(request);
+        var response = await _authService.LoginAsync(request);
 
-            return Ok(response);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new
-            {
-                message = ex.Message
-            });
-        }
+        return Ok( ApiResponse<AuthResponse>.Ok(response, "Login successful."));
     }
 }
