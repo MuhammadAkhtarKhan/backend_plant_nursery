@@ -1,10 +1,12 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PlantNursery.API.Middleware;
 using PlantNursery.Application.Authentication;
+using PlantNursery.Application.Common;
 using PlantNursery.Application.Interfaces;
 using PlantNursery.Infrastructure.Identity;
 using PlantNursery.Infrastructure.Persistence;
@@ -38,7 +40,30 @@ builder.Services
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(x => x.Value?.Errors.Count > 0)
+                .ToDictionary(
+                    x => x.Key,
+                    x => x.Value!.Errors
+                        .Select(e => e.ErrorMessage)
+                        .ToArray());
+
+            var response = new ApiResponse<object>
+            {
+                Success = false,
+                Message = "One or more validation errors occurred.",
+                Data = errors
+            };
+
+            return new BadRequestObjectResult(response);
+        };
+    });
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -102,6 +127,38 @@ builder.Services
 
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(jwtSettings.Key))
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = async context =>
+            {
+                // Prevent the default 401 response
+                context.HandleResponse();
+
+                context.Response.StatusCode =
+                    StatusCodes.Status401Unauthorized;
+
+                context.Response.ContentType = "application/json";
+
+                var response = ApiResponse.Fail(
+                    "Authentication is required.");
+
+                await context.Response.WriteAsJsonAsync(response);
+            },
+
+            OnForbidden = async context =>
+            {
+                context.Response.StatusCode =
+                    StatusCodes.Status403Forbidden;
+
+                context.Response.ContentType = "application/json";
+
+                var response = ApiResponse.Fail(
+                    "You do not have permission to access this resource.");
+
+                await context.Response.WriteAsJsonAsync(response);
+            }
         };
     });
 
