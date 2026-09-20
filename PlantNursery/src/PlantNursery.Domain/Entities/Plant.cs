@@ -11,6 +11,7 @@ public class Plant : BaseEntity
     public decimal Price { get; set; }
 
     public int StockQuantity { get; set; }
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
     public string? ScientificName { get; set; }
 
