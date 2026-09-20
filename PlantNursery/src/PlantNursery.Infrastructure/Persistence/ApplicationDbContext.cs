@@ -15,11 +15,10 @@ public class ApplicationDbContext: IdentityDbContext<ApplicationUser, IdentityRo
     }
 
     public DbSet<Category> Categories => Set<Category>();
-
     public DbSet<Plant> Plants => Set<Plant>();
-
     public DbSet<PlantImage> PlantImages => Set<PlantImage>();
-
+    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
