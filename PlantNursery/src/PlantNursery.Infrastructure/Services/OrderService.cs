@@ -135,11 +135,30 @@ public class OrderService : IOrderService
                 });
         }
 
-        order.TotalAmount = totalAmount;
+        order.TotalAmount = totalAmount;      
 
         _context.Orders.Add(order);
 
-        await _context.SaveChangesAsync();
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            await _context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await transaction.RollbackAsync();
+
+            throw new ConflictException( "The stock was changed by another transaction. Please refresh the plant stock and try again.");
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+
+            throw;
+        }
 
         return (await GetOrderDtoAsync(order.Id))!;
     }

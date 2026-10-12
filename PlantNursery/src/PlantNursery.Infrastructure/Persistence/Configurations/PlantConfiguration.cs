@@ -24,6 +24,9 @@ public class PlantConfiguration : IEntityTypeConfiguration<Plant>
 
         builder.Property(x => x.StockQuantity)
             .IsRequired();
+        builder.Property(x => x.RowVersion)
+            .IsRowVersion()
+            .IsConcurrencyToken();
 
         builder.Property(x => x.ScientificName)
             .HasMaxLength(200);
