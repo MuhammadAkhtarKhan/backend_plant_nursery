@@ -14,6 +14,7 @@ public class Order : BaseEntity
     public Guid UserId { get; set; }
 
     public decimal TotalAmount { get; set; }
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
     public PaymentMethod PaymentMethod { get; set; }
 

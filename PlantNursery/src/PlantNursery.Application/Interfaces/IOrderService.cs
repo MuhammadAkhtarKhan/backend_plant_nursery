@@ -1,4 +1,5 @@
 ﻿using PlantNursery.Application.DTOs.Orders;
+using PlantNursery.Domain.Enums;
 
 namespace PlantNursery.Application.Interfaces;
 
@@ -18,4 +19,6 @@ public interface IOrderService
         Guid userId);
 
     Task<IEnumerable<OrderDto>> GetAllAsync();
+    Task<OrderDto?> UpdateStatusAsync( Guid orderId, OrderStatus newStatus);
+    Task<bool> CancelAsync(Guid orderId);
 }

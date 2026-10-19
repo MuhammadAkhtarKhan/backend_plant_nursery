@@ -134,6 +134,43 @@ public class OrderController : ControllerBase
                 "Orders retrieved successfully."));
     }
 
+    [Authorize(Roles = "Admin")]
+    [HttpPut("{id:guid}/status")]
+    public async Task<IActionResult> UpdateStatus(
+    Guid id,
+    UpdateOrderStatusRequest request)
+    {
+        var order = await _orderService.UpdateStatusAsync(
+            id,
+            request.Status);
+
+        if (order == null)
+        {
+            return NotFound(
+                ApiResponse.Fail("Order not found."));
+        }
+
+        return Ok(
+            ApiResponse<OrderDto>.Ok(
+                order,
+                "Order status updated successfully."));
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPut("{id:guid}/cancel")]
+    public async Task<IActionResult> Cancel(Guid id)
+    {
+        var cancelled = await _orderService.CancelAsync(id);
+
+        if (!cancelled)
+        {
+            return NotFound(
+                ApiResponse.Fail("Order not found."));
+        }
+
+        return Ok(
+            ApiResponse.Ok("Order cancelled and stock restored."));
+    }
 
     // ============================================================
     // Helper

@@ -201,6 +201,40 @@ public class OrderService : IOrderService
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync();
     }
+    public async Task<OrderDto?> UpdateStatusAsync( Guid orderId, OrderStatus newStatus)
+    {
+        var order = await _context.Orders
+            .FirstOrDefaultAsync(x => x.Id == orderId);
+
+        if (order == null)
+        {
+            return null;
+        }
+
+        bool isValidTransition =
+            (order.OrderStatus == OrderStatus.Pending &&
+             newStatus == OrderStatus.Confirmed)
+            ||
+            (order.OrderStatus == OrderStatus.Confirmed &&
+             newStatus == OrderStatus.Processing)
+            ||
+            (order.OrderStatus == OrderStatus.Processing &&
+             newStatus == OrderStatus.Completed);
+
+        if (!isValidTransition)
+        {
+            throw new ValidationException(
+                $"Cannot change order status from " +
+                $"{order.OrderStatus} to {newStatus}.");
+        }
+
+        order.OrderStatus = newStatus;
+        order.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        return await GetByIdAsync(  orderId, order.UserId, isAdmin: true);
+    }
 
     private async Task<OrderDto?> GetOrderDtoAsync(
         Guid orderId)
@@ -258,5 +292,67 @@ public class OrderService : IOrderService
     {
         return $"ORD-{DateTime.UtcNow:yyyyMMddHHmmssfff}-" +
                Random.Shared.Next(100, 999);
+    }
+    public async Task<bool> CancelAsync(Guid orderId)
+    {
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            var order = await _context.Orders
+                .Include(x => x.Items)
+                .ThenInclude(x => x.Plant)
+                .FirstOrDefaultAsync(x => x.Id == orderId);
+
+            if (order == null)
+            {
+                return false;
+            }
+
+            if (order.OrderStatus == OrderStatus.Cancelled)
+            {
+                throw new ConflictException(
+                    "This order has already been cancelled.");
+            }
+
+            if (order.OrderStatus != OrderStatus.Pending &&
+                order.OrderStatus != OrderStatus.Confirmed &&
+                order.OrderStatus != OrderStatus.Processing)
+            {
+                throw new ValidationException(
+                    "Only pending, confirmed, or processing orders can be cancelled.");
+            }
+
+            foreach (var item in order.Items)
+            {
+                item.Plant.StockQuantity += item.Quantity;
+                item.Plant.UpdatedAt = DateTime.UtcNow;
+            }
+
+            order.OrderStatus = OrderStatus.Cancelled;
+            order.PaymentStatus = order.PaymentStatus == PaymentStatus.Paid
+                ? PaymentStatus.Refunded
+                : order.PaymentStatus;
+
+            order.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return true;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await transaction.RollbackAsync();
+
+            throw new ConflictException(
+                "The order or inventory changed during cancellation. Refresh and try again.");
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }
